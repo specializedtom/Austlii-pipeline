@@ -11,6 +11,14 @@ from src.pipeline.search import load_records, search_records
 app = typer.Typer(help="AustLII legislation pipeline")
 
 
+def _parse_jurisdiction(value: str) -> Jurisdiction:
+    normalized = value.strip()
+    for candidate in Jurisdiction:
+        if candidate.value.lower() == normalized.lower() or candidate.name.lower() == normalized.lower():
+            return candidate
+    raise typer.BadParameter(f"Unknown jurisdiction: {value}")
+
+
 @app.command("ingest")
 def ingest_cmd(
     jurisdiction: Jurisdiction = typer.Option(..., "--jurisdiction"),
@@ -37,21 +45,39 @@ def search_legislation_cmd(
     jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Optional jurisdiction filter, e.g. Cth."),
     status: str | None = typer.Option(None, "--status", help="Optional status filter, e.g. operative."),
     limit: int = typer.Option(20, "--limit", min=1, help="Max number of results."),
+    live: bool = typer.Option(False, "--live", help="Query AustLII directly without local cache."),
+    max_docs: int = typer.Option(100, "--max-docs", min=1, help="When --live is set, max docs to scan."),
+    as_of: str = typer.Option(date.today().isoformat(), "--as-of", help="Classification date for --live mode."),
 ) -> None:
-    records = load_records()
-    matches = search_records(query, records, jurisdiction=jurisdiction, status=status, limit=limit)
+    if live:
+        if not jurisdiction:
+            raise typer.BadParameter("--jurisdiction is required with --live")
+        live_matches = workflow.query_live(
+            query=query,
+            jurisdiction=_parse_jurisdiction(jurisdiction),
+            status=status,
+            max_docs=max_docs,
+            as_of=date.fromisoformat(as_of),
+        )
+        matches = live_matches[:limit]
+    else:
+        records = load_records()
+        matches = search_records(query, records, jurisdiction=jurisdiction, status=status, limit=limit)
+        if not matches:
+            typer.echo("No matches found.")
+            if status and records:
+                typer.echo("Tip: run `classify-operative` first, then retry status-filtered search.")
+            return
 
     if not matches:
         typer.echo("No matches found.")
-        if status and records:
-            typer.echo("Tip: run `classify-operative` first, then retry status-filtered search.")
         return
 
     typer.echo(f"Found {len(matches)} result(s):")
     for item in matches:
         typer.echo(
             " - {title} [{jur}] status={status} source_id={source}".format(
-                title=item.get("short_title", "<untitled>"),
+                title=item.get("short_title", item.get("title", "<untitled>")),
                 jur=item.get("jurisdiction", "<unknown>"),
                 status=item.get("status", "unknown"),
                 source=item.get("source_id", "<none>"),

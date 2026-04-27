@@ -55,6 +55,14 @@ python -m src.pipeline.cli search-legislation "privacy" --jurisdiction Cth --sta
 
 Search results are de-duplicated by `source_id` so repeated ingests do not show the same Act multiple times.
 
+For direct AustLII querying (no local cache), use live mode:
+
+```bash
+python -m src.pipeline.cli search-legislation "privacy" --live --jurisdiction Cth --status operative --max-docs 100 --limit 10
+```
+
+This mode is intended for Open-WebUI style online retrieval where fresh AustLII results are preferred over cached JSONL data.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

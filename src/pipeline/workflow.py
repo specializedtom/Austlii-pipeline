@@ -59,6 +59,55 @@ def ingest(
     return result
 
 
+def query_live(
+    query: str,
+    jurisdiction: Jurisdiction,
+    status: str | None = None,
+    max_docs: int = 100,
+    as_of: date | None = None,
+) -> list[dict[str, str]]:
+    """Query AustLII directly without reading/writing local processed cache."""
+    as_of = as_of or date.today()
+    client = AustliiClient()
+    targets = discover_legislation_urls(jurisdiction, client=client, max_docs=max_docs)
+
+    q = query.strip().lower()
+    seen: set[str] = set()
+    matches: list[dict[str, str]] = []
+
+    for url in targets:
+        try:
+            html = client.fetch(url)
+            parsed = parse_html(html)
+            record = normalize_parsed_document(parsed, url, jurisdiction)
+            classified = classify_operative_status(record, as_of=as_of)
+
+            if status and classified.status.value.lower() != status.lower():
+                continue
+
+            haystacks = [classified.short_title, classified.full_title, classified.source_id, classified.normalized_citation or ""]
+            if not any(q in (h or "").lower() for h in haystacks):
+                continue
+
+            if classified.source_id in seen:
+                continue
+            seen.add(classified.source_id)
+
+            matches.append(
+                {
+                    "title": classified.short_title,
+                    "jurisdiction": classified.jurisdiction.value,
+                    "status": classified.status.value,
+                    "source_id": classified.source_id,
+                    "source_url": str(classified.source_url),
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            _append_failed_url(jurisdiction.value, url, str(exc))
+
+    return matches
+
+
 def classify(as_of: date | None = None) -> dict[str, str | int]:
     as_of = as_of or date.today()
 

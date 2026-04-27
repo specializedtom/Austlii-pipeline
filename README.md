@@ -22,7 +22,7 @@ python -m src.pipeline.cli ingest --jurisdiction Cth --max-docs 200
 
 AustLII may intermittently return `403 Forbidden` for automated requests. The client now:
 
-- sends browser-like headers and follows redirects,
+- sends browser-like headers (including the AustLII search Referer) and follows redirects,
 - retries across common AustLII URL variants,
 - records failed URLs to `data/state/failed_urls.jsonl`,
 - and (by default) continues ingesting remaining URLs instead of crashing.

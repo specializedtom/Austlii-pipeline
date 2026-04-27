@@ -18,8 +18,8 @@ JURISDICTIONS = {
 }
 
 LEGISLATION_RE = re.compile(
-    r"\b(?:the\s+)?([A-Z][a-zA-Z0-9\.\-'&]+(?:\s+[a-zA-Z0-9\.\-'&]+)*?\s+(?:Act|Regulations?|Rules?|Bill|Order|Ordinance|Code|Statute))\s+"
-    r"((?:\(No\s+\d+\)\s+)?\d{4}(?:-\d{2,4})?)(?:\s*\(("
+    r"\b(?:the\s+)?([A-Z][a-zA-Z0-9\.\-'&]+(?:\s+[a-zA-Z0-9\.\-'&]+)*?\s+(?:Act|Regulations?|Rules?|Bill|Order|Ordinance|Code|Statute))"
+    r"(?:\s+((?:\(No\s+\d+\)\s+)?\d{4}(?:-\d{2,4})?))?(?:\s*\(("
     + "|".join(JURISDICTIONS.keys())
     + r")\))?",
     re.IGNORECASE,
@@ -62,7 +62,7 @@ def extract_legislation_citations(text: str, limit: int = 5) -> list[dict[str, s
 
         results.append(
             {
-                "citation": f"{title} {year}" + (f" ({jurisdiction})" if jurisdiction else ""),
+                "citation": (f"{title} {year}" if year else title) + (f" ({jurisdiction})" if jurisdiction else ""),
                 "title": title,
                 "year": year,
                 "jurisdiction": jurisdiction,

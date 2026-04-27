@@ -83,6 +83,8 @@ python -m src.pipeline.cli verify-text "Under the Privacy Act 1988 and Evidence 
 
 This is adapted from verifier-style workflows: it extracts citation candidates, queries AustLII, and reports verified vs unverified citations.
 
+Citation extraction supports both year-qualified references (e.g. `Privacy Act 1988`) and title-only references (e.g. `Copyright Act`).
+
 If AustLII title search is blocked (e.g., HTTP 403), verifier mode falls back to live legislation-page lookup within the selected jurisdiction.
 
 ## Layout

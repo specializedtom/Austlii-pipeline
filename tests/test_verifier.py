@@ -6,11 +6,13 @@ from src.pipeline import verifier
 
 class VerifierTests(unittest.TestCase):
     def test_extract_legislation_citations(self):
-        text = "Under the Privacy Act 1988 (Cth) and Evidence Act 1995 (Cth), obligations apply."
+        text = "Under the Privacy Act 1988 (Cth), the Copyright Act, and Evidence Act 1995 (Cth), obligations apply."
         hits = verifier.extract_legislation_citations(text, limit=5)
-        self.assertEqual(len(hits), 2)
+        self.assertEqual(len(hits), 3)
         self.assertEqual(hits[0]["title"], "Privacy Act")
         self.assertFalse(hits[0]["citation"].lower().startswith("the "))
+        self.assertEqual(hits[1]["title"], "Copyright Act")
+        self.assertIsNone(hits[1]["year"])
 
     def test_verify_text_citations(self):
         with patch.object(verifier, "austlii_legislation_search") as mock_search:

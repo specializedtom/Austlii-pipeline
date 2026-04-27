@@ -1,0 +1,8 @@
+repeal_markers:
+  - repealed
+  - ceased
+  - superseded
+operative_markers:
+  - in force
+  - operative
+  - commenced

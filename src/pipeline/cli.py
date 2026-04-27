@@ -46,16 +46,15 @@ def search_legislation_cmd(
     jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Optional jurisdiction filter, e.g. Cth."),
     status: str | None = typer.Option(None, "--status", help="Optional status filter, e.g. operative."),
     limit: int = typer.Option(20, "--limit", min=1, help="Max number of results."),
-    live: bool = typer.Option(False, "--live", help="Query AustLII directly without local cache."),
+    live: bool = typer.Option(True, "--live/--no-live", help="Query AustLII directly (default: live)."),
     max_docs: int = typer.Option(100, "--max-docs", min=1, help="When --live is set, max docs to scan."),
     as_of: str = typer.Option(date.today().isoformat(), "--as-of", help="Classification date for --live mode."),
 ) -> None:
     if live:
-        if not jurisdiction:
-            raise typer.BadParameter("--jurisdiction is required with --live")
+        live_jurisdiction = _parse_jurisdiction(jurisdiction) if jurisdiction else Jurisdiction.CTH
         live_matches = workflow.query_live(
             query=query,
-            jurisdiction=_parse_jurisdiction(jurisdiction),
+            jurisdiction=live_jurisdiction,
             status=status,
             max_docs=max_docs,
             as_of=date.fromisoformat(as_of),

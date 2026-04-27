@@ -13,13 +13,14 @@ class SearchTests(unittest.TestCase):
                 "\n".join(
                     [
                         '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988"}',
+                        '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988"}',
                         '{"short_title":"Evidence Act 1995","jurisdiction":"Cth","status":"operative","source_id":"ea1995"}',
                     ]
                 ),
                 encoding="utf-8",
             )
             rows = load_records(path)
-            self.assertEqual(len(rows), 2)
+            self.assertEqual(len(rows), 3)
 
             results = search_records("privacy", rows)
             self.assertEqual(len(results), 1)

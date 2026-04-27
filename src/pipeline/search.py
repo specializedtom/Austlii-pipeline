@@ -43,4 +43,14 @@ def search_records(
         ]
         return any(q in h.lower() for h in haystacks)
 
-    return [r for r in records if matches(r)][:limit]
+    filtered = [r for r in records if matches(r)]
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in filtered:
+        key = str(row.get("source_id") or row.get("source_url") or "")
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        deduped.append(row)
+    return deduped[:limit]

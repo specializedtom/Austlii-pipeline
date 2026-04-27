@@ -53,6 +53,8 @@ python -m src.pipeline.cli classify-operative --as-of 2026-04-27
 python -m src.pipeline.cli search-legislation "privacy" --jurisdiction Cth --status operative --limit 10
 ```
 
+Search results are de-duplicated by `source_id` so repeated ingests do not show the same Act multiple times.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

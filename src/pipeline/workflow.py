@@ -9,7 +9,7 @@ from src.ingest.austlii.client import AustliiClient
 from src.ingest.austlii.discover import discover_legislation_urls
 from src.ingest.austlii.normalize import normalize_parsed_document
 from src.ingest.austlii.parse import parse_html
-from src.ingest.austlii.store import append_record, store_raw_html
+from src.ingest.austlii.store import store_raw_html, upsert_record
 from src.models.legislation import LegislationRecord, LegislationStatus, Jurisdiction
 
 STATE_FILE = Path("data/state/pipeline_state.json")
@@ -41,7 +41,7 @@ def ingest(
             store_raw_html(jurisdiction.value, url, html)
             parsed = parse_html(html)
             record = normalize_parsed_document(parsed, url, jurisdiction)
-            append_record(record)
+            upsert_record(record)
             count += 1
         except Exception as exc:  # noqa: BLE001
             failures += 1

@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+
+from src.ingest.austlii.client import AustliiClient
 from src.models.legislation import Jurisdiction
 
 
@@ -18,3 +23,35 @@ SEED_INDEXES: dict[Jurisdiction, list[str]] = {
 
 def discover_seed_urls(jurisdiction: Jurisdiction) -> list[str]:
     return SEED_INDEXES.get(jurisdiction, [])
+
+
+def discover_legislation_urls(
+    jurisdiction: Jurisdiction,
+    client: AustliiClient,
+    max_docs: int = 100,
+) -> list[str]:
+    """Discover legislation document URLs from AustLII consolidated index pages."""
+    discovered: list[str] = []
+
+    for seed in discover_seed_urls(jurisdiction):
+        html = client.fetch(seed)
+        soup = BeautifulSoup(html, "html.parser")
+
+        for anchor in soup.select("a[href]"):
+            href = anchor.get("href", "").strip()
+            if not href or href.startswith("#"):
+                continue
+
+            candidate = urljoin(seed, href)
+
+            # Keep links inside the same consolidated acts tree.
+            if f"/{jurisdiction.value.lower()}/consol_act/" not in candidate.lower():
+                continue
+
+            if candidate.endswith("/") or candidate.endswith(".html"):
+                discovered.append(candidate)
+
+            if len(discovered) >= max_docs:
+                return list(dict.fromkeys(discovered))
+
+    return list(dict.fromkeys(discovered))

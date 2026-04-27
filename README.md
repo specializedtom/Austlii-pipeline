@@ -14,8 +14,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-# Ingest starter run
-python -m src.pipeline.cli ingest --jurisdiction Cth
+# Ingest up to 200 consolidated Acts for the Commonwealth
+python -m src.pipeline.cli ingest --jurisdiction Cth --max-docs 200
 ```
 
 ### Notes on AustLII 403 responses
@@ -28,6 +28,15 @@ AustLII may intermittently return `403 Forbidden` for automated requests. The cl
 - and (by default) continues ingesting remaining URLs instead of crashing.
 
 Use `--fail-fast` if you want the command to raise immediately.
+
+### How ingestion works
+
+`ingest` now has two stages:
+
+1. discover legislation links from jurisdiction seed indexes, then
+2. fetch each discovered legislation page (bounded by `--max-docs`).
+
+CLI output includes discovered targets, successful ingests, and failures.
 
 ## Layout
 

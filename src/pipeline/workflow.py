@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from src.ingest.austlii.client import AustliiClient
-from src.ingest.austlii.discover import discover_seed_urls
+from src.ingest.austlii.discover import discover_legislation_urls
 from src.ingest.austlii.normalize import normalize_parsed_document
 from src.ingest.austlii.parse import parse_html
 from src.ingest.austlii.store import append_record, store_raw_html
@@ -15,11 +15,25 @@ STATE_FILE = Path("data/state/pipeline_state.json")
 FAILED_FILE = Path("data/state/failed_urls.jsonl")
 
 
-def ingest(jurisdiction: Jurisdiction, fail_fast: bool = False) -> dict[str, int | str]:
+def ingest(
+    jurisdiction: Jurisdiction,
+    fail_fast: bool = False,
+    max_docs: int = 100,
+) -> dict[str, int | str]:
     client = AustliiClient()
     count = 0
     failures = 0
-    for url in discover_seed_urls(jurisdiction):
+
+    try:
+        targets = discover_legislation_urls(jurisdiction, client=client, max_docs=max_docs)
+    except Exception as exc:  # noqa: BLE001
+        targets = []
+        failures += 1
+        _append_failed_url(jurisdiction.value, "<seed_discovery>", str(exc))
+        if fail_fast:
+            raise
+
+    for url in targets:
         try:
             html = client.fetch(url)
             store_raw_html(jurisdiction.value, url, html)
@@ -37,6 +51,7 @@ def ingest(jurisdiction: Jurisdiction, fail_fast: bool = False) -> dict[str, int
         "jurisdiction": jurisdiction.value,
         "records_ingested": count,
         "records_failed": failures,
+        "targets_discovered": len(targets),
     }
     _save_state(result)
     return result

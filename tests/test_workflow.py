@@ -18,13 +18,14 @@ class WorkflowTests(unittest.TestCase):
 
             with patch.object(workflow, "STATE_FILE", base / "state.json"), patch.object(
                 workflow, "FAILED_FILE", base / "failed.jsonl"
-            ), patch.object(workflow, "discover_seed_urls", lambda _j: ["https://example.invalid/test"]), patch.object(
+            ), patch.object(workflow, "discover_legislation_urls", lambda *_a, **_k: ["https://example.invalid/test"]), patch.object(
                 workflow, "AustliiClient", FailingClient
             ):
                 result = workflow.ingest(Jurisdiction.CTH)
 
             self.assertEqual(result["records_ingested"], 0)
             self.assertEqual(result["records_failed"], 1)
+            self.assertEqual(result["targets_discovered"], 1)
             self.assertTrue((base / "failed.jsonl").exists())
 
 

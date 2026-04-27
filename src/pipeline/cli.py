@@ -7,6 +7,7 @@ import typer
 from src.models.legislation import Jurisdiction
 from src.pipeline import workflow
 from src.pipeline.search import load_records, search_records
+from src.pipeline.verifier import verify_text_citations
 
 app = typer.Typer(help="AustLII legislation pipeline")
 
@@ -85,6 +86,27 @@ def search_legislation_cmd(
         )
         for snippet in item.get("snippets", [])[:3]:
             typer.echo(f"    > {snippet}")
+
+
+@app.command("verify-text")
+def verify_text_cmd(
+    text: str = typer.Argument(..., help="Free text containing possible legislation citations."),
+    limit: int = typer.Option(5, "--limit", min=1, help="Maximum citations to verify."),
+) -> None:
+    result = verify_text_citations(text, limit=limit)
+    typer.echo(f"Citations found: {result['citations_found']}")
+
+    if result["verified"]:
+        typer.echo("Verified:")
+        for item in result["verified"]:
+            r = item["result"]
+            typer.echo(f" - {item['citation']} -> {r.get('title')} ({r.get('url')})")
+
+    if result["unverified"]:
+        typer.echo("Unverified:")
+        for item in result["unverified"]:
+            r = item["result"]
+            typer.echo(f" - {item['citation']} ({r.get('error', 'not found')})")
 
 
 @app.command("run-all")

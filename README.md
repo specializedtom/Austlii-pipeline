@@ -71,6 +71,16 @@ python -m src.pipeline.cli search-legislation "section 5" --jurisdiction Cth --s
 
 The CLI prints matching text snippets under each result.
 
+## Verify citations in free text
+
+You can verify extracted legislation citations against AustLII title search:
+
+```bash
+python -m src.pipeline.cli verify-text "Under the Privacy Act 1988 (Cth) and Evidence Act 1995 (Cth)..." --limit 5
+```
+
+This is adapted from verifier-style workflows: it extracts citation candidates, queries AustLII, and reports verified vs unverified citations.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

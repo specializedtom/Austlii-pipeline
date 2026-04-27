@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from html import unescape
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 JURISDICTIONS = {
     "Cth": "Commonwealth",
@@ -24,6 +24,21 @@ LEGISLATION_RE = re.compile(
     + r")\))?",
     re.IGNORECASE,
 )
+
+
+def build_sinosrch_url(
+    query: str,
+    method: str = "title",
+    results: int = 3,
+    mask_path: str = "au/legis",
+) -> str:
+    params = {
+        "method": method,
+        "query": query,
+        "results": str(results),
+        "mask_path": mask_path,
+    }
+    return "https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?" + urlencode(params)
 
 
 def clean_title(raw_title: str) -> str:
@@ -149,14 +164,12 @@ def austlii_legislation_search(
     max_results: int = 3,
 ) -> dict[str, Any]:
     search_terms = legislation_name + (f" {year}" if year else "")
-    query_string = (
-        f"query={quote(search_terms)}"
-        f";method=title"
-        f";results={max_results}"
-        f";meta={quote('/au')}"
-        f";mask_path="
+    url = build_sinosrch_url(
+        query=search_terms,
+        method="title",
+        results=max_results,
+        mask_path="au/legis",
     )
-    url = f"https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?{query_string}"
 
     try:
         from bs4 import BeautifulSoup

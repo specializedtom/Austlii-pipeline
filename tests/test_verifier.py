@@ -5,6 +5,12 @@ from src.pipeline import verifier
 
 
 class VerifierTests(unittest.TestCase):
+    def test_build_sinosrch_url(self):
+        url = verifier.build_sinosrch_url("depends on", method="phrase", results=5, mask_path="au/legis")
+        self.assertIn("method=phrase", url)
+        self.assertIn("query=depends+on", url)
+        self.assertIn("mask_path=au%2Flegis", url)
+
     def test_extract_legislation_citations(self):
         text = "Under the Privacy Act 1988 (Cth), the Copyright Act, and Evidence Act 1995 (Cth), obligations apply."
         hits = verifier.extract_legislation_citations(text, limit=5)

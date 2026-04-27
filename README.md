@@ -87,6 +87,8 @@ Citation extraction supports both year-qualified references (e.g. `Privacy Act 1
 
 If AustLII title search is blocked (e.g., HTTP 403), verifier mode falls back to live legislation-page lookup within the selected jurisdiction.
 
+Verifier title/phrase lookups now build sinosrch URLs with standard query params (e.g. `method=phrase&query=...&mask_path=au%2Flegis`).
+
 ## Layout
 
 - `src/models/`: canonical schemas.

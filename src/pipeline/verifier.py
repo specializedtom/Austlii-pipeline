@@ -203,13 +203,14 @@ def austlii_legislation_search(
         return {"found": False, "query": search_terms, "error": str(exc)}
 
 
-def verify_text_citations(text: str, limit: int = 5) -> dict[str, Any]:
+def verify_text_citations(text: str, limit: int = 5, default_jurisdiction: str | None = None) -> dict[str, Any]:
     citations = extract_legislation_citations(text, limit=limit)
     verified: list[dict[str, Any]] = []
     unverified: list[dict[str, Any]] = []
 
     for item in citations:
-        result = austlii_legislation_search(item["title"] or "", item["year"], item["jurisdiction"])
+        jurisdiction = item["jurisdiction"] or default_jurisdiction
+        result = austlii_legislation_search(item["title"] or "", item["year"], jurisdiction)
         payload = {**item, "result": result}
         if result.get("found"):
             verified.append(payload)

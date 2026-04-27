@@ -90,9 +90,10 @@ def search_legislation_cmd(
 @app.command("verify-text")
 def verify_text_cmd(
     text: str = typer.Argument(..., help="Free text containing possible legislation citations."),
+    jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Optional default jurisdiction, e.g. Cth."),
     limit: int = typer.Option(5, "--limit", min=1, help="Maximum citations to verify."),
 ) -> None:
-    result = verify_text_citations(text, limit=limit)
+    result = verify_text_citations(text, limit=limit, default_jurisdiction=jurisdiction)
     typer.echo(f"Citations found: {result['citations_found']}")
 
     if result["verified"]:

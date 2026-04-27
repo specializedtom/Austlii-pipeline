@@ -19,8 +19,9 @@ class VerifierTests(unittest.TestCase):
                 {"found": False, "error": "not found"},
             ]
             out = verifier.verify_text_citations(
-                "Privacy Act 1988 (Cth) and Madeup Act 1999 (Cth)",
+                "Privacy Act 1988 and Madeup Act 1999",
                 limit=5,
+                default_jurisdiction="Cth",
             )
             self.assertEqual(out["citations_found"], 2)
             self.assertEqual(len(out["verified"]), 1)

@@ -12,9 +12,12 @@ class SearchTests(unittest.TestCase):
             path.write_text(
                 "\n".join(
                     [
-                        '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988"}',
-                        '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988"}',
-                        '{"short_title":"Evidence Act 1995","jurisdiction":"Cth","status":"operative","source_id":"ea1995"}',
+                        '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988",'
+                        '"text":"Division 1 Preliminary\\nSection 5 Definitions\\nThis Act protects privacy."}',
+                        '{"short_title":"Privacy Act 1988","jurisdiction":"Cth","status":"operative","source_id":"pa1988",'
+                        '"text":"duplicate"}',
+                        '{"short_title":"Evidence Act 1995","jurisdiction":"Cth","status":"operative","source_id":"ea1995",'
+                        '"text":"Clause 1 Name of Act"}',
                     ]
                 ),
                 encoding="utf-8",
@@ -22,11 +25,13 @@ class SearchTests(unittest.TestCase):
             rows = load_records(path)
             self.assertEqual(len(rows), 3)
 
-            results = search_records("privacy", rows)
+            results = search_records("section 5", rows)
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0]["source_id"], "pa1988")
+            self.assertTrue(results[0]["snippets"])
+            self.assertTrue(any("Section 5" in s for s in results[0]["snippets"]))
 
-            filtered = search_records("act", rows, jurisdiction="cth", status="operative", limit=1)
+            filtered = search_records("clause 1", rows, jurisdiction="cth", status="operative", limit=1)
             self.assertEqual(len(filtered), 1)
 
 

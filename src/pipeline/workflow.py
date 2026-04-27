@@ -11,6 +11,7 @@ from src.ingest.austlii.normalize import normalize_parsed_document
 from src.ingest.austlii.parse import parse_html
 from src.ingest.austlii.store import store_raw_html, upsert_record
 from src.models.legislation import LegislationRecord, LegislationStatus, Jurisdiction
+from src.pipeline.search import _extract_snippets
 
 STATE_FILE = Path("data/state/pipeline_state.json")
 FAILED_FILE = Path("data/state/failed_urls.jsonl")
@@ -85,7 +86,7 @@ def query_live(
             if status and classified.status.value.lower() != status.lower():
                 continue
 
-            haystacks = [classified.short_title, classified.full_title, classified.source_id, classified.normalized_citation or ""]
+            haystacks = [classified.short_title, classified.full_title, classified.source_id, classified.normalized_citation or "", classified.text or ""]
             if not any(q in (h or "").lower() for h in haystacks):
                 continue
 
@@ -100,6 +101,7 @@ def query_live(
                     "status": classified.status.value,
                     "source_id": classified.source_id,
                     "source_url": str(classified.source_url),
+                    "snippets": _extract_snippets(classified.text or "", query),
                 }
             )
         except Exception as exc:  # noqa: BLE001

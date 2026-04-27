@@ -63,6 +63,14 @@ python -m src.pipeline.cli search-legislation "privacy" --live --jurisdiction Ct
 
 This mode is intended for Open-WebUI style online retrieval where fresh AustLII results are preferred over cached JSONL data.
 
+You can also search within body text (e.g., Division/Section/Clause references):
+
+```bash
+python -m src.pipeline.cli search-legislation "section 5" --jurisdiction Cth --status operative --limit 5
+```
+
+The CLI prints matching text snippets under each result.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

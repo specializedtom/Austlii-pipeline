@@ -83,6 +83,8 @@ def search_legislation_cmd(
                 source=item.get("source_id", "<none>"),
             )
         )
+        for snippet in item.get("snippets", [])[:3]:
+            typer.echo(f"    > {snippet}")
 
 
 @app.command("run-all")

@@ -18,6 +18,17 @@ pip install -e .
 python -m src.pipeline.cli ingest --jurisdiction Cth
 ```
 
+### Notes on AustLII 403 responses
+
+AustLII may intermittently return `403 Forbidden` for automated requests. The client now:
+
+- sends browser-like headers and follows redirects,
+- retries across common AustLII URL variants,
+- records failed URLs to `data/state/failed_urls.jsonl`,
+- and (by default) continues ingesting remaining URLs instead of crashing.
+
+Use `--fail-fast` if you want the command to raise immediately.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

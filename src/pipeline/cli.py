@@ -11,9 +11,15 @@ app = typer.Typer(help="AustLII legislation pipeline")
 
 
 @app.command("ingest")
-def ingest_cmd(jurisdiction: Jurisdiction = typer.Option(..., "--jurisdiction")) -> None:
-    count = workflow.ingest(jurisdiction)
-    typer.echo(f"Ingested {count} document(s) for {jurisdiction.value}")
+def ingest_cmd(
+    jurisdiction: Jurisdiction = typer.Option(..., "--jurisdiction"),
+    fail_fast: bool = typer.Option(False, "--fail-fast", help="Raise immediately on first fetch failure."),
+) -> None:
+    result = workflow.ingest(jurisdiction, fail_fast=fail_fast)
+    typer.echo(
+        f"Ingest completed for {result['jurisdiction']}: "
+        f"ingested={result['records_ingested']}, failed={result['records_failed']}"
+    )
 
 
 @app.command("classify-operative")
@@ -26,9 +32,10 @@ def classify_cmd(as_of: str = typer.Option(date.today().isoformat(), "--as-of"))
 def run_all_cmd(
     jurisdictions: list[Jurisdiction] = typer.Option([Jurisdiction.CTH], "--jurisdiction"),
     as_of: str = typer.Option(date.today().isoformat(), "--as-of"),
+    fail_fast: bool = typer.Option(False, "--fail-fast"),
 ) -> None:
     for jurisdiction in jurisdictions:
-        workflow.ingest(jurisdiction)
+        workflow.ingest(jurisdiction, fail_fast=fail_fast)
     workflow.classify(date.fromisoformat(as_of))
     typer.echo("Pipeline run complete")
 

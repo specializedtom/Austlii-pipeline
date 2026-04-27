@@ -81,6 +81,8 @@ python -m src.pipeline.cli verify-text "Under the Privacy Act 1988 (Cth) and Evi
 
 This is adapted from verifier-style workflows: it extracts citation candidates, queries AustLII, and reports verified vs unverified citations.
 
+If AustLII title search is blocked (e.g., HTTP 403), verifier mode falls back to live legislation-page lookup within the selected jurisdiction.
+
 ## Layout
 
 - `src/models/`: canonical schemas.

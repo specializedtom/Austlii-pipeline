@@ -5,7 +5,6 @@ from html import unescape
 from typing import Any
 from urllib.parse import quote
 
-
 JURISDICTIONS = {
     "Cth": "Commonwealth",
     "ACT": "Australian Capital Territory",
@@ -26,17 +25,6 @@ LEGISLATION_RE = re.compile(
     re.IGNORECASE,
 )
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    ),
-    "Referer": "https://www.austlii.edu.au/forms/search1.html",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-AU,en;q=0.9",
-}
-
 
 def clean_title(raw_title: str) -> str:
     noise_patterns = [
@@ -51,9 +39,10 @@ def clean_title(raw_title: str) -> str:
         r"^in\s+",
         r"^for\s+",
     ]
-    title = raw_title
+    title = raw_title.strip()
     for pattern in noise_patterns:
         title = re.sub(pattern, "", title, flags=re.IGNORECASE)
+    title = re.sub(r"^(?:the)\s+", "", title, flags=re.IGNORECASE)
     return title.strip()
 
 
@@ -85,6 +74,74 @@ def extract_legislation_citations(text: str, limit: int = 5) -> list[dict[str, s
     return results
 
 
+def _fallback_legislation_lookup(
+    legislation_name: str,
+    year: str | None = None,
+    jurisdiction: str | None = None,
+    max_docs: int = 200,
+) -> dict[str, Any]:
+    """Fallback verifier when sinosrch endpoint is blocked (e.g. 403)."""
+    try:
+        from urllib.parse import urljoin
+
+        from bs4 import BeautifulSoup
+        from src.ingest.austlii.client import AustliiClient
+        from src.ingest.austlii.parse import parse_html
+    except Exception as exc:  # noqa: BLE001
+        return {"found": False, "error": f"fallback unavailable: {exc}"}
+
+    code = (jurisdiction or "Cth").lower()
+    code = {"qld": "qld", "vic": "vic", "tas": "tas", "cth": "cth", "nsw": "nsw", "nt": "nt", "wa": "wa", "sa": "sa", "act": "act"}.get(code, "cth")
+    seed = f"https://www.austlii.edu.au/au/legis/{code}/consol_act/"
+
+    client = AustliiClient()
+    try:
+        index_html = client.fetch(seed)
+    except Exception as exc:  # noqa: BLE001
+        return {"found": False, "error": f"fallback index fetch failed: {exc}"}
+
+    soup = BeautifulSoup(index_html, "html.parser")
+    candidates: list[str] = []
+    for anchor in soup.select("a[href]"):
+        href = (anchor.get("href") or "").strip()
+        if not href:
+            continue
+        link = urljoin(seed, href)
+        if f"/{code}/consol_act/" in link.lower():
+            candidates.append(link)
+        if len(candidates) >= max_docs:
+            break
+
+    query_title = legislation_name.lower().strip()
+    query_year = (year or "").strip()
+
+    for url in candidates:
+        try:
+            html = client.fetch(url)
+            parsed = parse_html(html)
+            title_text = parsed.get("title", "")
+            title_lower = title_text.lower()
+            if query_title not in title_lower:
+                continue
+            if query_year and query_year not in title_text:
+                continue
+            return {
+                "found": True,
+                "title": title_text,
+                "url": url,
+                "meta": "fallback-live-lookup",
+                "jurisdiction": code.upper() if code != "cth" else "Cth",
+            }
+        except Exception:
+            continue
+
+    return {
+        "found": False,
+        "query": f"{legislation_name} {year or ''}".strip(),
+        "error": "No matching legislation found via fallback live lookup",
+    }
+
+
 def austlii_legislation_search(
     legislation_name: str,
     year: str | None = None,
@@ -102,13 +159,13 @@ def austlii_legislation_search(
     url = f"https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?{query_string}"
 
     try:
-        import httpx
         from bs4 import BeautifulSoup
+        from src.ingest.austlii.client import AustliiClient
 
-        response = httpx.get(url, headers=HEADERS, timeout=15.0, follow_redirects=True)
-        response.raise_for_status()
+        client = AustliiClient()
+        html = client.fetch(url)
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         for card in soup.select("div.card"):
             for li in card.select("li.multi"):
                 anchor = li.find("a")
@@ -138,16 +195,11 @@ def austlii_legislation_search(
                     "jurisdiction": jurisdiction,
                 }
 
-        return {"found": False, "query": search_terms}
-    except httpx.TimeoutException:
-        return {"found": False, "query": search_terms, "error": "Request timed out"}
-    except httpx.HTTPStatusError as exc:
-        return {
-            "found": False,
-            "query": search_terms,
-            "error": f"HTTP {exc.response.status_code}: {str(exc)}",
-        }
+        return _fallback_legislation_lookup(legislation_name, year, jurisdiction)
     except Exception as exc:  # noqa: BLE001
+        fallback = _fallback_legislation_lookup(legislation_name, year, jurisdiction)
+        if fallback.get("found"):
+            return fallback
         return {"found": False, "query": search_terms, "error": str(exc)}
 
 

@@ -4,15 +4,17 @@ import json
 from datetime import date
 from pathlib import Path
 
+from src.classify.operative_status import classify_operative_status
 from src.ingest.austlii.client import AustliiClient
 from src.ingest.austlii.discover import discover_legislation_urls
 from src.ingest.austlii.normalize import normalize_parsed_document
 from src.ingest.austlii.parse import parse_html
 from src.ingest.austlii.store import append_record, store_raw_html
-from src.models.legislation import Jurisdiction
+from src.models.legislation import LegislationRecord, LegislationStatus, Jurisdiction
 
 STATE_FILE = Path("data/state/pipeline_state.json")
 FAILED_FILE = Path("data/state/failed_urls.jsonl")
+PROCESSED_FILE = Path("data/processed/legislation.jsonl")
 
 
 def ingest(
@@ -57,11 +59,47 @@ def ingest(
     return result
 
 
-def classify(as_of: date | None = None) -> dict[str, str]:
+def classify(as_of: date | None = None) -> dict[str, str | int]:
     as_of = as_of or date.today()
-    sample = {"status": "ok", "as_of": as_of.isoformat()}
-    _save_state({"last_classify_as_of": as_of.isoformat()})
-    return sample
+
+    if not PROCESSED_FILE.exists():
+        result = {"status": "no_data", "as_of": as_of.isoformat(), "records_classified": 0}
+        _save_state({"last_classify_as_of": as_of.isoformat(), "records_classified": 0})
+        return result
+
+    rows = [line.strip() for line in PROCESSED_FILE.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    classified_rows: list[str] = []
+    operative_count = 0
+    unknown_count = 0
+    error_count = 0
+
+    for raw in rows:
+        try:
+            record = LegislationRecord.model_validate_json(raw)
+            updated = classify_operative_status(record, as_of=as_of)
+            if updated.status == LegislationStatus.OPERATIVE:
+                operative_count += 1
+            if updated.status == LegislationStatus.UNKNOWN:
+                unknown_count += 1
+            classified_rows.append(json.dumps(updated.model_dump(mode="json")))
+        except Exception as exc:  # noqa: BLE001
+            error_count += 1
+            classified_rows.append(raw)
+            _append_failed_url("<classification>", "<processed_row>", str(exc))
+
+    PROCESSED_FILE.write_text("\n".join(classified_rows) + ("\n" if classified_rows else ""), encoding="utf-8")
+
+    result = {
+        "status": "ok",
+        "as_of": as_of.isoformat(),
+        "records_classified": len(rows),
+        "operative_records": operative_count,
+        "unknown_records": unknown_count,
+        "classification_errors": error_count,
+    }
+    _save_state({"last_classify_as_of": as_of.isoformat(), "records_classified": len(rows)})
+    return result
 
 
 def _append_failed_url(jurisdiction: str, url: str, error: str) -> None:

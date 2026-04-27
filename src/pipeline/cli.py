@@ -43,6 +43,8 @@ def search_legislation_cmd(
 
     if not matches:
         typer.echo("No matches found.")
+        if status and records:
+            typer.echo("Tip: run `classify-operative` first, then retry status-filtered search.")
         return
 
     typer.echo(f"Found {len(matches)} result(s):")

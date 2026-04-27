@@ -43,6 +43,12 @@ CLI output includes discovered targets, successful ingests, and failures.
 
 After ingesting, search local records from `data/processed/legislation.jsonl`:
 
+Before filtering by `--status operative`, run classification to populate status values:
+
+```bash
+python -m src.pipeline.cli classify-operative --as-of 2026-04-27
+```
+
 ```bash
 python -m src.pipeline.cli search-legislation "privacy" --jurisdiction Cth --status operative --limit 10
 ```

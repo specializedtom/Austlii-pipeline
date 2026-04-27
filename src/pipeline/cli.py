@@ -6,6 +6,7 @@ import typer
 
 from src.models.legislation import Jurisdiction
 from src.pipeline import workflow
+from src.pipeline.search import load_records, search_records
 
 app = typer.Typer(help="AustLII legislation pipeline")
 
@@ -28,6 +29,32 @@ def ingest_cmd(
 def classify_cmd(as_of: str = typer.Option(date.today().isoformat(), "--as-of")) -> None:
     result = workflow.classify(date.fromisoformat(as_of))
     typer.echo(result)
+
+
+@app.command("search-legislation")
+def search_legislation_cmd(
+    query: str = typer.Argument(..., help="Search text for legislation title/citation/source id."),
+    jurisdiction: str | None = typer.Option(None, "--jurisdiction", help="Optional jurisdiction filter, e.g. Cth."),
+    status: str | None = typer.Option(None, "--status", help="Optional status filter, e.g. operative."),
+    limit: int = typer.Option(20, "--limit", min=1, help="Max number of results."),
+) -> None:
+    records = load_records()
+    matches = search_records(query, records, jurisdiction=jurisdiction, status=status, limit=limit)
+
+    if not matches:
+        typer.echo("No matches found.")
+        return
+
+    typer.echo(f"Found {len(matches)} result(s):")
+    for item in matches:
+        typer.echo(
+            " - {title} [{jur}] status={status} source_id={source}".format(
+                title=item.get("short_title", "<untitled>"),
+                jur=item.get("jurisdiction", "<unknown>"),
+                status=item.get("status", "unknown"),
+                source=item.get("source_id", "<none>"),
+            )
+        )
 
 
 @app.command("run-all")

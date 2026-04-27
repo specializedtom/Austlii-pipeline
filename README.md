@@ -38,6 +38,15 @@ Use `--fail-fast` if you want the command to raise immediately.
 
 CLI output includes discovered targets, successful ingests, and failures.
 
+
+## Search ingested legislation
+
+After ingesting, search local records from `data/processed/legislation.jsonl`:
+
+```bash
+python -m src.pipeline.cli search-legislation "privacy" --jurisdiction Cth --status operative --limit 10
+```
+
 ## Layout
 
 - `src/models/`: canonical schemas.
